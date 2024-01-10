@@ -15,6 +15,7 @@
 #include "matrix4.h"
 #include "IAttributes.h"
 #include <list>
+#include <optional>
 
 namespace irr
 {
@@ -65,7 +66,7 @@ namespace scene
 
 		//! This method is called just before the rendering process of the whole scene.
 		/** Nodes may register themselves in the render pipeline during this call,
-		precalculate the geometry which should be renderered, and prevent their
+		precalculate the geometry which should be rendered, and prevent their
 		children from being able to register themselves if they are clipped by simply
 		not calling their OnRegisterSceneNode method.
 		If you are implementing your own scene node, you should overwrite this method
@@ -275,31 +276,31 @@ namespace scene
 
 				child->grab();
 				child->remove(); // remove from old parent
-				Children.push_back(child);
+				// Note: This iterator is not invalidated until we erase it.
+				child->ThisIterator = Children.insert(Children.end(), child);
 				child->Parent = this;
 			}
 		}
 
 
 		//! Removes a child from this scene node.
-		/** If found in the children list, the child pointer is also
-		dropped and might be deleted if no other grab exists.
+		/**
 		\param child A pointer to the child which shall be removed.
 		\return True if the child was removed, and false if not,
-		e.g. because it couldn't be found in the children list. */
+		e.g. because it belongs to a different parent or no parent. */
 		virtual bool removeChild(ISceneNode* child)
 		{
-			ISceneNodeList::iterator it = Children.begin();
-			for (; it != Children.end(); ++it)
-				if ((*it) == child)
-				{
-					(*it)->Parent = 0;
-					(*it)->drop();
-					Children.erase(it);
-					return true;
-				}
+			if (child->Parent != this)
+				return false;
 
-			return false;
+			// The iterator must be set since the parent is not null.
+			_IRR_DEBUG_BREAK_IF(!child->ThisIterator.has_value());
+			auto it = *child->ThisIterator;
+			child->ThisIterator = std::nullopt;
+			child->Parent = nullptr;
+			child->drop();
+			Children.erase(it);
+			return true;
 		}
 
 
@@ -309,13 +310,11 @@ namespace scene
 		*/
 		virtual void removeAll()
 		{
-			ISceneNodeList::iterator it = Children.begin();
-			for (; it != Children.end(); ++it)
-			{
-				(*it)->Parent = 0;
-				(*it)->drop();
+			for (auto &child : Children) {
+				child->Parent = nullptr;
+				child->ThisIterator = std::nullopt;
+				child->drop();
 			}
-
 			Children.clear();
 		}
 
@@ -352,38 +351,14 @@ namespace scene
 		}
 
 
-		//! Sets all material flags at once to a new value.
-		/** Useful, for example, if you want the whole mesh to be
-		affected by light.
-		\param flag Which flag of all materials to be set.
-		\param newvalue New value of that flag. */
-		void setMaterialFlag(video::E_MATERIAL_FLAG flag, bool newvalue)
-		{
-			for (u32 i=0; i<getMaterialCount(); ++i)
-				getMaterial(i).setFlag(flag, newvalue);
-		}
-
-
-		//! Sets the texture of the specified layer in all materials of this scene node to the new texture.
-		/** \param textureLayer Layer of texture to be set. Must be a
-		value smaller than MATERIAL_MAX_TEXTURES.
-		\param texture New texture to be used. */
-		void setMaterialTexture(u32 textureLayer, video::ITexture* texture)
-		{
-			if (textureLayer >= video::MATERIAL_MAX_TEXTURES)
-				return;
-
-			for (u32 i=0; i<getMaterialCount(); ++i)
-				getMaterial(i).setTexture(textureLayer, texture);
-		}
-
-
-		//! Sets the material type of all materials in this scene node to a new material type.
-		/** \param newType New type of material to be set. */
-		void setMaterialType(video::E_MATERIAL_TYPE newType)
-		{
-			for (u32 i=0; i<getMaterialCount(); ++i)
-				getMaterial(i).MaterialType = newType;
+		//! Execute a function on all materials of this scene node.
+		/** Useful for setting material properties, e.g. if you want the whole
+		mesh to be affected by light. */
+		template <typename F>
+		void forEachMaterial(F &&fn) {
+			for (u32 i = 0; i < getMaterialCount(); i++) {
+				fn(getMaterial(i));
+			}
 		}
 
 
@@ -532,10 +507,8 @@ namespace scene
 			grab();
 			remove();
 
-			Parent = newParent;
-
-			if (Parent)
-				Parent->addChild(this);
+			if (newParent)
+				newParent->addChild(this);
 
 			drop();
 		}
@@ -642,11 +615,14 @@ namespace scene
 		//! Relative scale of the scene node.
 		core::vector3df RelativeScale;
 
-		//! Pointer to the parent
-		ISceneNode* Parent;
-
 		//! List of all children of this node
 		std::list<ISceneNode*> Children;
+
+		//! Iterator pointing to this node in the parent's child list.
+		std::optional<ISceneNodeList::iterator> ThisIterator;
+
+		//! Pointer to the parent
+		ISceneNode* Parent;
 
 		//! Pointer to the scene manager
 		ISceneManager* SceneManager;

@@ -4,7 +4,6 @@
 // This file is part of the "Irrlicht Engine".
 // For conditions of distribution and use, see copyright notice in Irrlicht.h
 
-#include "IrrCompileConfig.h"
 
 #ifdef _IRR_COMPILE_WITH_OSX_DEVICE_
 
@@ -472,12 +471,12 @@ static bool firstLaunch = true;
 - (id)initWithDevice:(irr::CIrrDeviceMacOSX*)device
 {
     self = [super init];
-    
+
     if (self)
         Device = device;
-    
+
     Quit = false;
-    
+
     return (self);
 }
 
@@ -529,7 +528,7 @@ static bool firstLaunch = true;
 {
     NSWindow	*window;
     NSRect		frame;
-    
+
     window = [aNotification object];
     frame = [window frame];
     Device->setResize((int)frame.size.width,(int)frame.size.height);
@@ -547,8 +546,8 @@ namespace irr
 //! constructor
 CIrrDeviceMacOSX::CIrrDeviceMacOSX(const SIrrlichtCreationParameters& param)
 	: CIrrDeviceStub(param), Window(NULL), Display(NULL),
-	SoftwareDriverTarget(0), DeviceWidth(0), DeviceHeight(0),
-	ScreenWidth(0), ScreenHeight(0), MouseButtonStates(0), SoftwareRendererType(0),
+	DeviceWidth(0), DeviceHeight(0),
+	ScreenWidth(0), ScreenHeight(0), MouseButtonStates(0),
 	IsActive(true), IsFullscreen(false), IsShiftDown(false), IsControlDown(false), IsResizable(false)
 {
 	struct utsname name;
@@ -565,7 +564,7 @@ CIrrDeviceMacOSX::CIrrDeviceMacOSX(const SIrrlichtCreationParameters& param)
 		{
 			[[NSAutoreleasePool alloc] init];
 			[[NSApplication sharedApplication] activateIgnoringOtherApps:YES];
-			[NSApp setDelegate:(id<NSApplicationDelegate>)[[[CIrrDelegateOSX alloc] initWithDevice:this] autorelease]];
+			[[NSApplication sharedApplication] setDelegate:[[[CIrrDelegateOSX alloc] initWithDevice:this] autorelease]];
 
             // Create menu
 
@@ -617,7 +616,6 @@ CIrrDeviceMacOSX::CIrrDeviceMacOSX(const SIrrlichtCreationParameters& param)
 
 CIrrDeviceMacOSX::~CIrrDeviceMacOSX()
 {
-	[SoftwareDriverTarget release];
 	[NSApp setPresentationOptions:(NSApplicationPresentationDefault)];
 	closeDevice();
 #if defined(_IRR_COMPILE_WITH_JOYSTICK_EVENTS_)
@@ -648,15 +646,15 @@ bool CIrrDeviceMacOSX::createWindow()
     CGDisplayErr error;
     bool result = false;
     Display = CGMainDisplayID();
-    
+
     CGRect displayRect;
     CGDisplayModeRef displaymode, olddisplaymode;
-    
+
     ScreenWidth = (int)CGDisplayPixelsWide(Display);
     ScreenHeight = (int)CGDisplayPixelsHigh(Display);
-    
+
     const NSBackingStoreType type = (CreationParams.DriverType == video::EDT_OPENGL) ? NSBackingStoreBuffered : NSBackingStoreNonretained;
-    
+
     // TODO: fullscreen
     //if (!CreationParams.Fullscreen)
     {
@@ -664,36 +662,36 @@ bool CIrrDeviceMacOSX::createWindow()
         {
             int x = (CreationParams.WindowPosition.X > 0) ? CreationParams.WindowPosition.X : 0;
             int y = (CreationParams.WindowPosition.Y > 0) ? CreationParams.WindowPosition.Y : 0;
-            
+
             if (CreationParams.WindowPosition.Y > -1)
             {
                 int screenHeight = [[[NSScreen screens] objectAtIndex:0] frame].size.height;
                 y = screenHeight - y - CreationParams.WindowSize.Height;
             }
-            
+
             Window = [[NSWindow alloc] initWithContentRect:NSMakeRect(x, y, CreationParams.WindowSize.Width,CreationParams.WindowSize.Height) styleMask:NSTitledWindowMask+NSClosableWindowMask+NSResizableWindowMask backing:type defer:FALSE];
 
             if (CreationParams.WindowPosition.X == -1 && CreationParams.WindowPosition.Y == -1)
                 [Window center];
         }
-        
+
         DeviceWidth = CreationParams.WindowSize.Width;
         DeviceHeight = CreationParams.WindowSize.Height;
-        
+
         result = true;
     }
-    
+
     if (result)
     {
         if (Window)
         {
-            [Window setDelegate:(id<NSWindowDelegate>)[NSApp delegate]];
+            [Window setDelegate:(CIrrDelegateOSX *)[NSApp delegate]];
             [Window setAcceptsMouseMovedEvents:TRUE];
             [Window setIsVisible:TRUE];
             [Window makeKeyAndOrderFront:nil];
         }
     }
-    
+
     return result;
 }
 
@@ -708,7 +706,7 @@ void CIrrDeviceMacOSX::setResize(int width, int height)
 	if (CreationParams.DriverType == video::EDT_OPENGL)
     {
         NSOpenGLContext* Context = (NSOpenGLContext*)ContextManager->getContext().OpenGLOSX.Context;
-        
+
         if (Context)
             [Context update];
     }
@@ -731,24 +729,6 @@ void CIrrDeviceMacOSX::createDriver()
 {
 	switch (CreationParams.DriverType)
 	{
-		case video::EDT_SOFTWARE:
-#ifdef _IRR_COMPILE_WITH_SOFTWARE_
-			VideoDriver = video::createSoftwareDriver(CreationParams.WindowSize, CreationParams.Fullscreen, FileSystem, this);
-			SoftwareRendererType = 2;
-#else
-			os::Printer::log("No Software driver support compiled in.", ELL_ERROR);
-#endif
-			break;
-
-		case video::EDT_BURNINGSVIDEO:
-#ifdef _IRR_COMPILE_WITH_BURNINGSVIDEO_
-			VideoDriver = video::createBurningVideoDriver(CreationParams, FileSystem, this);
-			SoftwareRendererType = 1;
-#else
-			os::Printer::log("Burning's video driver was not compiled in.", ELL_ERROR);
-#endif
-			break;
-
 		case video::EDT_OPENGL:
 #ifdef _IRR_COMPILE_WITH_OPENGL_
             {
@@ -761,13 +741,13 @@ void CIrrDeviceMacOSX::createDriver()
                 {
                     os::Printer::log("Could not create OpenGL driver.", ELL_ERROR);
                 }
-                
-				if (Window) 
+
+				if (Window)
 				{
 					[[Window contentView] setWantsBestResolutionOpenGLSurface:NO];
 					[(NSOpenGLContext*)ContextManager->getContext().OpenGLOSX.Context setView:[Window contentView]];
 				}
-				else 
+				else
 				{
 					[(NSView*)CreationParams.WindowId setWantsBestResolutionOpenGLSurface:NO];
 					[(NSOpenGLContext*)ContextManager->getContext().OpenGLOSX.Context setView:(NSView*)CreationParams.WindowId];
@@ -778,8 +758,6 @@ void CIrrDeviceMacOSX::createDriver()
 #endif
 			break;
 
-		case video::DEPRECATED_EDT_DIRECT3D8_NO_LONGER_EXISTS:
-		case video::EDT_DIRECT3D9:
 		case video::EDT_OGLES1:
 		case video::EDT_OGLES2:
 			os::Printer::log("This driver is not available in OSX. Try OpenGL or Software renderer.", ELL_ERROR);
@@ -1104,7 +1082,7 @@ void CIrrDeviceMacOSX::postMouseEvent(void *event,irr::SEvent &ievent)
 	{
 		ievent.MouseInput.Shift = ([(NSEvent *)event modifierFlags] & NSShiftKeyMask) != 0;
 		ievent.MouseInput.Control = ([(NSEvent *)event modifierFlags] & NSControlKeyMask) != 0;
-		
+
 		postEventFromUser(ievent);
 	}
 
@@ -1184,8 +1162,8 @@ void CIrrDeviceMacOSX::setCursorVisible(bool visible)
 	else
 		CGDisplayHideCursor(CGMainDisplayID());
 }
-    
-    
+
+
 void CIrrDeviceMacOSX::setWindow(NSWindow* window)
 {
     Window = window;
@@ -1348,94 +1326,13 @@ void CIrrDeviceMacOSX::restoreWindow()
 {
 	[Window deminiaturize:[NSApp self]];
 }
-    
+
 //! Get the position of this window on screen
 core::position2di CIrrDeviceMacOSX::getWindowPosition()
 {
 	NSRect rect = [Window frame];
 	int screenHeight = [[[NSScreen screens] objectAtIndex:0] frame].size.height;
 	return core::position2di(rect.origin.x, screenHeight - rect.origin.y - rect.size.height);
-}
-
-
-
-bool CIrrDeviceMacOSX::present(video::IImage* surface, void* windowId, core::rect<s32>* src )
-{
-	// todo: implement window ID and src rectangle
-
-	if (!surface)
-		return false;
-
-	if (SoftwareRendererType > 0)
-	{
-		const u32 colorSamples=3;
-		// do we need to change the size?
-		const bool updateSize = !SoftwareDriverTarget ||
-				s32([SoftwareDriverTarget size].width) != surface->getDimension().Width ||
-				s32([SoftwareDriverTarget size].height) != surface->getDimension().Height;
-
-		NSRect areaRect = NSMakeRect(0.0, 0.0, surface->getDimension().Width, surface->getDimension().Height);
-		const u32 destPitch = (colorSamples * areaRect.size.width);
-
-		// create / update the target
-		if (updateSize)
-		{
-			[SoftwareDriverTarget release];
-			// allocate target for IImage
-			SoftwareDriverTarget = [[NSBitmapImageRep alloc]
-					initWithBitmapDataPlanes: nil
-					pixelsWide: areaRect.size.width
-					pixelsHigh: areaRect.size.height
-					bitsPerSample: 8
-					samplesPerPixel: colorSamples
-					hasAlpha: NO
-					isPlanar: NO
-					colorSpaceName: NSCalibratedRGBColorSpace
-					bytesPerRow: destPitch
-					bitsPerPixel: 8*colorSamples];
-		}
-
-		if (SoftwareDriverTarget==nil)
-			return false;
-
-		// get pointer to image data
-		unsigned char* imgData = (unsigned char*)surface->getData();
-
-		u8* srcdata = reinterpret_cast<u8*>(imgData);
-		u8* destData = reinterpret_cast<u8*>([SoftwareDriverTarget bitmapData]);
-		const u32 srcheight = core::min_(surface->getDimension().Height, (u32)areaRect.size.height);
-		const u32 srcPitch = surface->getPitch();
-		const u32 minWidth = core::min_(surface->getDimension().Width, (u32)areaRect.size.width);
-		for (u32 y=0; y!=srcheight; ++y)
-		{
-			if(SoftwareRendererType == 2)
-			{
-				if (surface->getColorFormat() == video::ECF_A8R8G8B8)
-					video::CColorConverter::convert_A8R8G8B8toB8G8R8(srcdata, minWidth, destData);
-				else if (surface->getColorFormat() == video::ECF_A1R5G5B5)
-					video::CColorConverter::convert_A1R5G5B5toB8G8R8(srcdata, minWidth, destData);
-				else
-					video::CColorConverter::convert_viaFormat(srcdata, surface->getColorFormat(), minWidth, destData, video::ECF_R8G8B8);
-			}
-			else
-			{
-				if (surface->getColorFormat() == video::ECF_A8R8G8B8)
-					video::CColorConverter::convert_A8R8G8B8toR8G8B8(srcdata, minWidth, destData);
-				else if (surface->getColorFormat() == video::ECF_A1R5G5B5)
-					video::CColorConverter::convert_A1R5G5B5toR8G8B8(srcdata, minWidth, destData);
-				else
-					video::CColorConverter::convert_viaFormat(srcdata, surface->getColorFormat(), minWidth, destData, video::ECF_R8G8B8);
-			}
-
-			srcdata += srcPitch;
-			destData += destPitch;
-		}
-
-		// todo: draw properly into a sub-view
-		[SoftwareDriverTarget draw];
-	}
-
-	return false;
 }
 
 

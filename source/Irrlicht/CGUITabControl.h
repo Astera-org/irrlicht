@@ -2,11 +2,7 @@
 // This file is part of the "Irrlicht Engine".
 // For conditions of distribution and use, see copyright notice in irrlicht.h
 
-#ifndef __C_GUI_TAB_CONTROL_H_INCLUDED__
-#define __C_GUI_TAB_CONTROL_H_INCLUDED__
-
-#include "IrrCompileConfig.h"
-#ifdef _IRR_COMPILE_WITH_GUI_
+#pragma once
 
 #include "IGUITabControl.h"
 #include "irrArray.h"
@@ -153,8 +149,11 @@ namespace gui
 
 		void scrollLeft();
 		void scrollRight();
-		bool needScrollControl( s32 startIndex=0, bool withScrollControl=false );
-		s32 calcTabWidth(s32 pos, IGUIFont* font, const wchar_t* text, bool withScrollControl ) const;
+		//! Indicates whether the tabs overflow in X direction
+		bool needScrollControl( s32 startIndex=0, bool withScrollControl=false, s32 *pos_rightmost=nullptr );
+		//! Left index calculation based on the selected tab
+		s32 calculateScrollIndexFromActive();
+		s32 calcTabWidth(IGUIFont* font, const wchar_t* text) const;
 		core::rect<s32> calcTabPos();
 		void setVisibleTab(s32 idx);
 		void removeTabButNotChild(s32 idx);
@@ -180,8 +179,3 @@ namespace gui
 
 } // end namespace gui
 } // end namespace irr
-
-#endif // _IRR_COMPILE_WITH_GUI_
-
-#endif
-

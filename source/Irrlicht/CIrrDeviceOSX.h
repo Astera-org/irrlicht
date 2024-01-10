@@ -3,16 +3,12 @@
 // This file is part of the "Irrlicht Engine".
 // For conditions of distribution and use, see copyright notice in Irrlicht.h
 
-#ifndef __C_IRR_DEVICE_OSX_H_INCLUDED__
-#define __C_IRR_DEVICE_OSX_H_INCLUDED__
-
-#include "IrrCompileConfig.h"
+#pragma once
 
 #ifdef _IRR_COMPILE_WITH_OSX_DEVICE_
 
 #include "CIrrDeviceStub.h"
 #include "IrrlichtDevice.h"
-#include "IImagePresenter.h"
 #include "IGUIEnvironment.h"
 #include "ICursorControl.h"
 
@@ -26,7 +22,7 @@ namespace irr
     class CIrrDeviceMacOSX;
 }
 
-@interface CIrrDelegateOSX : NSObject
+@interface CIrrDelegateOSX : NSObject <NSApplicationDelegate, NSWindowDelegate>
 
 - (id)initWithDevice:(irr::CIrrDeviceMacOSX*)device;
 - (void)terminate:(id)sender;
@@ -36,7 +32,7 @@ namespace irr
 
 namespace irr
 {
-	class CIrrDeviceMacOSX : public CIrrDeviceStub, video::IImagePresenter
+	class CIrrDeviceMacOSX : public CIrrDeviceStub
 	{
 	public:
 
@@ -67,9 +63,6 @@ namespace irr
 
 		//! Checks if the Irrlicht window is minimized
 		bool isWindowMinimized() const override;
-
-		//! presents a surface in the client area
-		bool present(video::IImage* surface, void* windowId=0, core::rect<s32>* src=0 ) override;
 
 		//! notifies the device that it should close itself
 		void closeDevice() override;
@@ -237,14 +230,12 @@ namespace irr
 
 		NSWindow* Window;
         CGDirectDisplayID Display;
-		NSBitmapImageRep* SoftwareDriverTarget;
 		std::map<int,int> KeyCodes;
 		int DeviceWidth;
 		int DeviceHeight;
 		int ScreenWidth;
 		int ScreenHeight;
 		u32 MouseButtonStates;
-        u32 SoftwareRendererType;
         bool IsFullscreen;
 		bool IsActive;
 		bool IsShiftDown;
@@ -256,5 +247,3 @@ namespace irr
 } // end namespace irr
 
 #endif // _IRR_COMPILE_WITH_OSX_DEVICE_
-#endif // __C_IRR_DEVICE_MACOSX_H_INCLUDED__
-

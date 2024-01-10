@@ -2,11 +2,9 @@
 // This file is part of the "Irrlicht Engine".
 // For conditions of distribution and use, see copyright notice in irrlicht.h
 
-#ifndef __C_IRR_DEVICE_STUB_H_INCLUDED__
-#define __C_IRR_DEVICE_STUB_H_INCLUDED__
+#pragma once
 
 #include "IrrlichtDevice.h"
-#include "IImagePresenter.h"
 #include "SIrrCreationParameters.h"
 #include "IContextManager.h"
 
@@ -25,8 +23,7 @@ namespace irr
 
 	namespace scene
 	{
-		ISceneManager* createSceneManager(video::IVideoDriver* driver,
-			io::IFileSystem* fs, gui::ICursorControl* cc, gui::IGUIEnvironment *gui);
+		ISceneManager* createSceneManager(video::IVideoDriver* driver, gui::ICursorControl* cc);
 	}
 
 	namespace io
@@ -36,11 +33,6 @@ namespace irr
 
 	namespace video
 	{
-		IVideoDriver* createSoftwareDriver(const core::dimension2d<u32>& windowSize,
-				bool fullscreen, io::IFileSystem* io,
-				video::IImagePresenter* presenter);
-		IVideoDriver* createBurningVideoDriver(const irr::SIrrlichtCreationParameters& params,
-				io::IFileSystem* io, video::IImagePresenter* presenter);
 		IVideoDriver* createNullDriver(io::IFileSystem* io, const core::dimension2d<u32>& screenSize);
 	}
 
@@ -78,6 +70,9 @@ namespace irr
 		//! Returns a pointer to the ITimer object. With it the current Time can be received.
 		ITimer* getTimer() override;
 
+		//! Sets the window icon.
+		bool setWindowIcon(const video::IImage *img) override;
+
 		//! Returns the version of the engine.
 		const char* getVersion() const override;
 
@@ -100,6 +95,9 @@ namespace irr
 		//! Returns the operation system opertator object.
 		IOSOperator* getOSOperator() override;
 
+		//! Checks if the window is maximized.
+		bool isWindowMaximized() const override;
+
 		//! Checks if the window is running in fullscreen mode.
 		bool isFullscreen() const override;
 
@@ -109,41 +107,41 @@ namespace irr
 		//! Activate any joysticks, and generate events for them.
 		bool activateJoysticks(core::array<SJoystickInfo> & joystickInfo) override;
 
-        //! Activate accelerometer.
-        bool activateAccelerometer(float updateInterval = 0.016666f) override;
-        
-        //! Deactivate accelerometer.
-        bool deactivateAccelerometer() override;
-        
-        //! Is accelerometer active.
-        bool isAccelerometerActive() override;
-        
-        //! Is accelerometer available.
-        bool isAccelerometerAvailable() override;
-        
-        //! Activate gyroscope.
-        bool activateGyroscope(float updateInterval = 0.016666f) override;
-        
-        //! Deactivate gyroscope.
-        bool deactivateGyroscope() override;
-        
-        //! Is gyroscope active.
-        bool isGyroscopeActive() override;
-        
-        //! Is gyroscope available.
-        bool isGyroscopeAvailable() override;
-        
-        //! Activate device motion.
-        bool activateDeviceMotion(float updateInterval = 0.016666f) override;
-        
-        //! Deactivate device motion.
-        bool deactivateDeviceMotion() override;
-        
-        //! Is device motion active.
-        bool isDeviceMotionActive() override;
-        
-        //! Is device motion available.
-        bool isDeviceMotionAvailable() override;
+		//! Activate accelerometer.
+		bool activateAccelerometer(float updateInterval = 0.016666f) override;
+
+		//! Deactivate accelerometer.
+		bool deactivateAccelerometer() override;
+
+		//! Is accelerometer active.
+		bool isAccelerometerActive() override;
+
+		//! Is accelerometer available.
+		bool isAccelerometerAvailable() override;
+
+		//! Activate gyroscope.
+		bool activateGyroscope(float updateInterval = 0.016666f) override;
+
+		//! Deactivate gyroscope.
+		bool deactivateGyroscope() override;
+
+		//! Is gyroscope active.
+		bool isGyroscopeActive() override;
+
+		//! Is gyroscope available.
+		bool isGyroscopeAvailable() override;
+
+		//! Activate device motion.
+		bool activateDeviceMotion(float updateInterval = 0.016666f) override;
+
+		//! Deactivate device motion.
+		bool deactivateDeviceMotion() override;
+
+		//! Is device motion active.
+		bool isDeviceMotionActive() override;
+
+		//! Is device motion available.
+		bool isDeviceMotionAvailable() override;
 
 		//! Set the maximal elapsed time between 2 clicks to generate doubleclicks for the mouse. It also affects tripleclick behavior.
 		//! When set to 0 no double- and tripleclicks will be generated.
@@ -154,6 +152,9 @@ namespace irr
 
 		//! Remove all messages pending in the system message loop
 		void clearSystemMessages() override;
+
+		//! Get the display density in dots per inch.
+		float getDisplayDensity() const override;
 
 		//! Resize the render window.
 		void setWindowSize(const irr::core::dimension2d<u32>& size) override {}
@@ -204,6 +205,3 @@ namespace irr
 	};
 
 } // end namespace irr
-
-#endif
-

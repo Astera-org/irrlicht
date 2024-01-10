@@ -2,15 +2,12 @@
 // This file is part of the "Irrlicht Engine".
 // For conditions of distribution and use, see copyright notice in irrlicht.h
 
-#ifndef __C_IRR_DEVICE_WIN32_H_INCLUDED__
-#define __C_IRR_DEVICE_WIN32_H_INCLUDED__
+#pragma once
 
-#include "IrrCompileConfig.h"
 #ifdef _IRR_COMPILE_WITH_WINDOWS_DEVICE_
 
 #include "CIrrDeviceStub.h"
 #include "IrrlichtDevice.h"
-#include "IImagePresenter.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -25,7 +22,7 @@ namespace irr
 {
 	struct SJoystickWin32Control;
 
-	class CIrrDeviceWin32 : public CIrrDeviceStub, video::IImagePresenter
+	class CIrrDeviceWin32 : public CIrrDeviceStub
 	{
 	friend struct SJoystickWin32Control;
 	public:
@@ -49,6 +46,9 @@ namespace irr
 		//! sets the caption of the window
 		void setWindowCaption(const wchar_t* text) override;
 
+		//! Sets the window icon.
+		bool setWindowIcon(const video::IImage *img) override;
+
 		//! returns if window is active. if not, nothing need to be drawn
 		bool isWindowActive() const override;
 
@@ -58,8 +58,8 @@ namespace irr
 		//! returns if window is minimized
 		bool isWindowMinimized() const override;
 
-		//! presents a surface in the client area
-		bool present(video::IImage* surface, void* windowId=0, core::rect<s32>* src=0) override;
+		//! returns last state from maximizeWindow() and restoreWindow()
+		bool isWindowMaximized() const override;
 
 		//! notifies the device that it should close itself
 		void closeDevice() override;
@@ -97,6 +97,9 @@ namespace irr
 		{
 			return EIDT_WIN32;
 		}
+
+		//! Get the display density in dots per inch.
+		float getDisplayDensity() const override;
 
 		//! Compares to the last call of this function to return double and triple clicks.
 		//! \return Returns only 1,2 or 3. A 4th click will start with 1 again.
@@ -417,9 +420,10 @@ namespace irr
 		CCursorControl* Win32CursorControl;
 
 		SJoystickWin32Control* JoyControl;
+
+		bool WindowMaximized;
 	};
 
 } // end namespace irr
 
 #endif // _IRR_COMPILE_WITH_WINDOWS_DEVICE_
-#endif // __C_IRR_DEVICE_WIN32_H_INCLUDED__

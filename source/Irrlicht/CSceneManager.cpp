@@ -2,7 +2,6 @@
 // This file is part of the "Irrlicht Engine".
 // For conditions of distribution and use, see copyright notice in irrlicht.h
 
-#include "IrrCompileConfig.h"
 #include "CSceneManager.h"
 #include "IVideoDriver.h"
 #include "IFileSystem.h"
@@ -12,32 +11,14 @@
 #include "IMaterialRenderer.h"
 #include "IReadFile.h"
 #include "IWriteFile.h"
-#include "EProfileIDs.h"
-#include "IProfiler.h"
 
 #include "os.h"
 
-// We need this include for the case of skinned mesh support without
-// any such loader
-#ifdef _IRR_COMPILE_WITH_SKINNED_MESH_SUPPORT_
 #include "CSkinnedMesh.h"
-#endif
-
-#ifdef _IRR_COMPILE_WITH_X_LOADER_
 #include "CXMeshFileLoader.h"
-#endif
-
-#ifdef _IRR_COMPILE_WITH_OBJ_LOADER_
 #include "COBJMeshFileLoader.h"
-#endif
-
-#ifdef _IRR_COMPILE_WITH_B3D_LOADER_
 #include "CB3DMeshFileLoader.h"
-#endif
-
-#ifdef _IRR_COMPILE_WITH_BILLBOARD_SCENENODE_
 #include "CBillboardSceneNode.h"
-#endif // _IRR_COMPILE_WITH_BILLBOARD_SCENENODE_
 #include "CAnimatedMeshSceneNode.h"
 #include "CCameraSceneNode.h"
 #include "CMeshSceneNode.h"
@@ -52,10 +33,9 @@ namespace scene
 {
 
 //! constructor
-CSceneManager::CSceneManager(video::IVideoDriver* driver, io::IFileSystem* fs,
-		gui::ICursorControl* cursorControl, IMeshCache* cache,
-		gui::IGUIEnvironment* gui)
-: ISceneNode(0, 0), Driver(driver), FileSystem(fs), GUIEnvironment(gui),
+CSceneManager::CSceneManager(video::IVideoDriver* driver,
+		gui::ICursorControl* cursorControl, IMeshCache* cache)
+: ISceneNode(0, 0), Driver(driver),
 	CursorControl(cursorControl),
 	ActiveCamera(0), ShadowColor(150,0,0,0), AmbientLight(0,0,0,0), Parameters(0),
 	MeshCache(cache), CurrentRenderPass(ESNRP_NONE)
@@ -71,14 +51,8 @@ CSceneManager::CSceneManager(video::IVideoDriver* driver, io::IFileSystem* fs,
 	if (Driver)
 		Driver->grab();
 
-	if (FileSystem)
-		FileSystem->grab();
-
 	if (CursorControl)
 		CursorControl->grab();
-
-	if (GUIEnvironment)
-		GUIEnvironment->grab();
 
 	// create mesh cache if not there already
 	if (!MeshCache)
@@ -98,34 +72,9 @@ CSceneManager::CSceneManager(video::IVideoDriver* driver, io::IFileSystem* fs,
 	// TODO: now that we have multiple scene managers, these should be
 	// shallow copies from the previous manager if there is one.
 
-	#ifdef _IRR_COMPILE_WITH_X_LOADER_
-	MeshLoaderList.push_back(new CXMeshFileLoader(this, FileSystem));
-	#endif
-	#ifdef _IRR_COMPILE_WITH_OBJ_LOADER_
-	MeshLoaderList.push_back(new COBJMeshFileLoader(this, FileSystem));
-	#endif
-	#ifdef _IRR_COMPILE_WITH_B3D_LOADER_
+	MeshLoaderList.push_back(new CXMeshFileLoader(this));
+	MeshLoaderList.push_back(new COBJMeshFileLoader(this));
 	MeshLoaderList.push_back(new CB3DMeshFileLoader(this));
-	#endif
-
-	IRR_PROFILE(
-		static bool initProfile = false;
-		if (!initProfile )
-		{
-			initProfile = true;
-			getProfiler().add(EPID_SM_DRAW_ALL, L"drawAll", L"Irrlicht scene");
-			getProfiler().add(EPID_SM_ANIMATE, L"animate", L"Irrlicht scene");
-			getProfiler().add(EPID_SM_RENDER_CAMERAS, L"cameras", L"Irrlicht scene");
-			getProfiler().add(EPID_SM_RENDER_LIGHTS, L"lights", L"Irrlicht scene");
-			getProfiler().add(EPID_SM_RENDER_SKYBOXES, L"skyboxes", L"Irrlicht scene");
-			getProfiler().add(EPID_SM_RENDER_DEFAULT, L"defaultnodes", L"Irrlicht scene");
-			getProfiler().add(EPID_SM_RENDER_SHADOWS, L"shadows", L"Irrlicht scene");
-			getProfiler().add(EPID_SM_RENDER_TRANSPARENT, L"transp.nodes", L"Irrlicht scene");
-			getProfiler().add(EPID_SM_RENDER_EFFECT, L"effectnodes", L"Irrlicht scene");
-			getProfiler().add(EPID_SM_RENDER_GUI_NODES, L"guinodes", L"Irrlicht scene");
-			getProfiler().add(EPID_SM_REGISTER, L"reg.render.node", L"Irrlicht scene");
-		}
- 	)
 }
 
 
@@ -140,17 +89,11 @@ CSceneManager::~CSceneManager()
 	if (Driver)
 		Driver->removeAllHardwareBuffers();
 
-	if (FileSystem)
-		FileSystem->drop();
-
 	if (CursorControl)
 		CursorControl->drop();
 
 	if (CollisionManager)
 		CollisionManager->drop();
-
-	if (GUIEnvironment)
-		GUIEnvironment->drop();
 
 	u32 i;
 	for (i=0; i<MeshLoaderList.size(); ++i)
@@ -176,30 +119,7 @@ CSceneManager::~CSceneManager()
 }
 
 
-//! gets an animateable mesh. loads it if needed. returned pointer must not be dropped.
-IAnimatedMesh* CSceneManager::getMesh(const io::path& filename, const io::path& alternativeCacheName)
-{
-	io::path cacheName = alternativeCacheName.empty() ? filename : alternativeCacheName;
-	IAnimatedMesh* msh = MeshCache->getMeshByName(cacheName);
-	if (msh)
-		return msh;
-
-	io::IReadFile* file = FileSystem->createAndOpenFile(filename);
-	if (!file)
-	{
-		os::Printer::log("Could not load mesh, because file could not be opened: ", filename, ELL_ERROR);
-		return 0;
-	}
-
-	msh = getUncachedMesh(file, filename, cacheName);
-
-	file->drop();
-
-	return msh;
-}
-
-
-//! gets an animateable mesh. loads it if needed. returned pointer must not be dropped.
+//! gets an animatable mesh. loads it if needed. returned pointer must not be dropped.
 IAnimatedMesh* CSceneManager::getMesh(io::IReadFile* file)
 {
 	if (!file)
@@ -250,21 +170,6 @@ IAnimatedMesh* CSceneManager::getUncachedMesh(io::IReadFile* file, const io::pat
 video::IVideoDriver* CSceneManager::getVideoDriver()
 {
 	return Driver;
-}
-
-
-//! returns the GUI Environment
-gui::IGUIEnvironment* CSceneManager::getGUIEnvironment()
-{
-	return GUIEnvironment;
-}
-
-//! Get the active FileSystem
-/** \return Pointer to the FileSystem
-This pointer should not be dropped. See IReferenceCounted::drop() for more information. */
-io::IFileSystem* CSceneManager::getFileSystem()
-{
-	return FileSystem;
 }
 
 
@@ -337,7 +242,6 @@ IBillboardSceneNode* CSceneManager::addBillboardSceneNode(ISceneNode* parent,
 	video::SColor colorTop, video::SColor colorBottom
 	)
 {
-#ifdef _IRR_COMPILE_WITH_BILLBOARD_SCENENODE_
 	if (!parent)
 		parent = this;
 
@@ -346,9 +250,6 @@ IBillboardSceneNode* CSceneManager::addBillboardSceneNode(ISceneNode* parent,
 	node->drop();
 
 	return node;
-#else
-	return 0;
-#endif
 }
 
 
@@ -509,7 +410,6 @@ bool CSceneManager::isCulled(const ISceneNode* node) const
 //! registers a node for rendering it at a specific time.
 u32 CSceneManager::registerNodeForRendering(ISceneNode* node, E_SCENE_NODE_RENDER_PASS pass)
 {
-	IRR_PROFILE(CProfileScope p1(EPID_SM_REGISTER);)
 	u32 taken = 0;
 
 	switch(pass)
@@ -597,17 +497,6 @@ u32 CSceneManager::registerNodeForRendering(ISceneNode* node, E_SCENE_NODE_RENDE
 		break;
 	}
 
-#ifdef _IRR_SCENEMANAGER_DEBUG
-	s32 index = Parameters->findAttribute("calls");
-	Parameters->setAttribute(index, Parameters->getAttributeAsInt(index)+1);
-
-	if (!taken)
-	{
-		index = Parameters->findAttribute("culled");
-		Parameters->setAttribute(index, Parameters->getAttributeAsInt(index)+1);
-	}
-#endif
-
 	return taken;
 }
 
@@ -625,19 +514,8 @@ void CSceneManager::clearAllRegisteredNodesForRendering()
 //! draws all scene nodes
 void CSceneManager::drawAll()
 {
-	IRR_PROFILE(CProfileScope psAll(EPID_SM_DRAW_ALL);)
-
 	if (!Driver)
 		return;
-
-#ifdef _IRR_SCENEMANAGER_DEBUG
-	// reset attributes
-	Parameters->setAttribute("culled", 0);
-	Parameters->setAttribute("calls", 0);
-	Parameters->setAttribute("drawn_solid", 0);
-	Parameters->setAttribute("drawn_transparent", 0);
-	Parameters->setAttribute("drawn_transparent_effect", 0);
-#endif
 
 	u32 i; // new ISO for scoping problem in some compilers
 
@@ -652,29 +530,24 @@ void CSceneManager::drawAll()
 	Driver->setAllowZWriteOnTransparent(Parameters->getAttributeAsBool(ALLOW_ZWRITE_ON_TRANSPARENT));
 
 	// do animations and other stuff.
-	IRR_PROFILE(getProfiler().start(EPID_SM_ANIMATE));
 	OnAnimate(os::Timer::getTime());
-	IRR_PROFILE(getProfiler().stop(EPID_SM_ANIMATE));
 
 	/*!
 		First Scene Node for prerendering should be the active camera
 		consistent Camera is needed for culling
 	*/
-	IRR_PROFILE(getProfiler().start(EPID_SM_RENDER_CAMERAS));
 	camWorldPos.set(0,0,0);
 	if (ActiveCamera)
 	{
 		ActiveCamera->render();
 		camWorldPos = ActiveCamera->getAbsolutePosition();
 	}
-	IRR_PROFILE(getProfiler().stop(EPID_SM_RENDER_CAMERAS));
 
 	// let all nodes register themselves
 	OnRegisterSceneNode();
 
 	//render camera scenes
 	{
-		IRR_PROFILE(CProfileScope psCam(EPID_SM_RENDER_CAMERAS);)
 		CurrentRenderPass = ESNRP_CAMERA;
 		Driver->getOverrideMaterial().Enabled = ((Driver->getOverrideMaterial().EnablePasses & CurrentRenderPass) != 0);
 
@@ -686,7 +559,6 @@ void CSceneManager::drawAll()
 
 	// render skyboxes
 	{
-		IRR_PROFILE(CProfileScope psSkyBox(EPID_SM_RENDER_SKYBOXES);)
 		CurrentRenderPass = ESNRP_SKY_BOX;
 		Driver->getOverrideMaterial().Enabled = ((Driver->getOverrideMaterial().EnablePasses & CurrentRenderPass) != 0);
 
@@ -698,7 +570,6 @@ void CSceneManager::drawAll()
 
 	// render default objects
 	{
-		IRR_PROFILE(CProfileScope psDefault(EPID_SM_RENDER_DEFAULT);)
 		CurrentRenderPass = ESNRP_SOLID;
 		Driver->getOverrideMaterial().Enabled = ((Driver->getOverrideMaterial().EnablePasses & CurrentRenderPass) != 0);
 
@@ -707,15 +578,11 @@ void CSceneManager::drawAll()
 		for (i=0; i<SolidNodeList.size(); ++i)
 			SolidNodeList[i].Node->render();
 
-#ifdef _IRR_SCENEMANAGER_DEBUG
-		Parameters->setAttribute("drawn_solid", (s32) SolidNodeList.size() );
-#endif
 		SolidNodeList.set_used(0);
 	}
 
 	// render transparent objects.
 	{
-		IRR_PROFILE(CProfileScope psTrans(EPID_SM_RENDER_TRANSPARENT);)
 		CurrentRenderPass = ESNRP_TRANSPARENT;
 		Driver->getOverrideMaterial().Enabled = ((Driver->getOverrideMaterial().EnablePasses & CurrentRenderPass) != 0);
 
@@ -723,15 +590,11 @@ void CSceneManager::drawAll()
 		for (i=0; i<TransparentNodeList.size(); ++i)
 			TransparentNodeList[i].Node->render();
 
-#ifdef _IRR_SCENEMANAGER_DEBUG
-		Parameters->setAttribute ( "drawn_transparent", (s32) TransparentNodeList.size() );
-#endif
 		TransparentNodeList.set_used(0);
 	}
 
 	// render transparent effect objects.
 	{
-		IRR_PROFILE(CProfileScope psEffect(EPID_SM_RENDER_EFFECT);)
 		CurrentRenderPass = ESNRP_TRANSPARENT_EFFECT;
 		Driver->getOverrideMaterial().Enabled = ((Driver->getOverrideMaterial().EnablePasses & CurrentRenderPass) != 0);
 
@@ -739,23 +602,18 @@ void CSceneManager::drawAll()
 
 		for (i=0; i<TransparentEffectNodeList.size(); ++i)
 			TransparentEffectNodeList[i].Node->render();
-#ifdef _IRR_SCENEMANAGER_DEBUG
-		Parameters->setAttribute("drawn_transparent_effect", (s32) TransparentEffectNodeList.size());
-#endif
+
 		TransparentEffectNodeList.set_used(0);
 	}
 
 	// render custom gui nodes
 	{
-		IRR_PROFILE(CProfileScope psEffect(EPID_SM_RENDER_GUI_NODES);)
 		CurrentRenderPass = ESNRP_GUI;
 		Driver->getOverrideMaterial().Enabled = ((Driver->getOverrideMaterial().EnablePasses & CurrentRenderPass) != 0);
 
 		for (i=0; i<GuiNodeList.size(); ++i)
 			GuiNodeList[i]->render();
-#ifdef _IRR_SCENEMANAGER_DEBUG
-		Parameters->setAttribute("drawn_gui_nodes", (s32) GuiNodeList.size());
-#endif
+
 		GuiNodeList.set_used(0);
 	}
 	clearDeletionList();
@@ -979,7 +837,7 @@ IMeshCache* CSceneManager::getMeshCache()
 //! Creates a new scene manager.
 ISceneManager* CSceneManager::createNewSceneManager(bool cloneContent)
 {
-	CSceneManager* manager = new CSceneManager(Driver, FileSystem, CursorControl, MeshCache, GUIEnvironment);
+	CSceneManager* manager = new CSceneManager(Driver, CursorControl, MeshCache);
 
 	if (cloneContent)
 		manager->cloneMembers(this, manager);
@@ -1005,59 +863,20 @@ const video::SColorf& CSceneManager::getAmbientLight() const
 //! Get a skinned mesh, which is not available as header-only code
 ISkinnedMesh* CSceneManager::createSkinnedMesh()
 {
-#ifdef _IRR_COMPILE_WITH_SKINNED_MESH_SUPPORT_
 	return new CSkinnedMesh();
-#else
-	return 0;
-#endif
 }
 
 //! Returns a mesh writer implementation if available
 IMeshWriter* CSceneManager::createMeshWriter(EMESH_WRITER_TYPE type)
 {
-	switch(type)
-	{
-	case EMWT_IRR_MESH:
-	case EMWT_COLLADA:
-		return 0;
-	case EMWT_STL:
-#ifdef _IRR_COMPILE_WITH_STL_WRITER_
-		return new CSTLMeshWriter(this);
-#else
-		return 0;
-#endif
-	case EMWT_OBJ:
-#ifdef _IRR_COMPILE_WITH_OBJ_WRITER_
-		return new COBJMeshWriter(this, FileSystem);
-#else
-		return 0;
-#endif
-
-	case EMWT_PLY:
-#ifdef _IRR_COMPILE_WITH_PLY_WRITER_
-		return new CPLYMeshWriter();
-#else
-		return 0;
-#endif
-
-	case EMWT_B3D:
-#ifdef _IRR_COMPILE_WITH_B3D_WRITER_
-		return new CB3DMeshWriter();
-#else
-		return 0;
-#endif
-	}
-
 	return 0;
 }
 
 
 // creates a scenemanager
-ISceneManager* createSceneManager(video::IVideoDriver* driver,
-		io::IFileSystem* fs, gui::ICursorControl* cursorcontrol,
-		gui::IGUIEnvironment *guiEnvironment)
+ISceneManager* createSceneManager(video::IVideoDriver* driver, gui::ICursorControl* cursorcontrol)
 {
-	return new CSceneManager(driver, fs, cursorcontrol, 0, guiEnvironment );
+	return new CSceneManager(driver, cursorcontrol, nullptr);
 }
 
 

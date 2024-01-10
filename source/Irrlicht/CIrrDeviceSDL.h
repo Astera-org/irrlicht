@@ -4,16 +4,12 @@
 // This device code is based on the original SDL device implementation
 // contributed by Shane Parker (sirshane).
 
-#ifndef __C_IRR_DEVICE_SDL_H_INCLUDED__
-#define __C_IRR_DEVICE_SDL_H_INCLUDED__
-
-#include "IrrCompileConfig.h"
+#pragma once
 
 #ifdef _IRR_COMPILE_WITH_SDL_DEVICE_
 
 #include "IrrlichtDevice.h"
 #include "CIrrDeviceStub.h"
-#include "IImagePresenter.h"
 #include "ICursorControl.h"
 
 #ifdef _IRR_EMSCRIPTEN_PLATFORM_
@@ -28,7 +24,7 @@
 namespace irr
 {
 
-	class CIrrDeviceSDL : public CIrrDeviceStub, video::IImagePresenter
+	class CIrrDeviceSDL : public CIrrDeviceStub
 	{
 	public:
 
@@ -50,6 +46,9 @@ namespace irr
 		//! sets the caption of the window
 		void setWindowCaption(const wchar_t* text) override;
 
+		//! Sets the window icon.
+		bool setWindowIcon(const video::IImage *img) override;
+
 		//! returns if window is active. if not, nothing need to be drawn
 		bool isWindowActive() const override;
 
@@ -61,9 +60,6 @@ namespace irr
 
 		//! returns color format of the window.
 		video::ECOLOR_FORMAT getColorFormat() const override;
-
-		//! presents a surface in the client area
-		bool present(video::IImage* surface, void* windowId=0, core::rect<s32>* src=0) override;
 
 		//! notifies the device that it should close itself
 		void closeDevice() override;
@@ -80,6 +76,9 @@ namespace irr
 		//! Restores the window size.
 		void restoreWindow() override;
 
+		//! Checks if the window is maximized.
+		bool isWindowMaximized() const override;
+
 		//! Checks if the Irrlicht window is running in fullscreen mode
 		/** \return True if window is fullscreen. */
 		bool isFullscreen() const override;
@@ -95,6 +94,9 @@ namespace irr
 		{
 			return EIDT_SDL;
 		}
+
+		//! Get the display density in dots per inch.
+		float getDisplayDensity() const override;
 
 		void SwapWindow();
 
@@ -265,6 +267,15 @@ namespace irr
 	static EM_BOOL MouseLeaveCallback(int eventType, const EmscriptenMouseEvent *mouseEvent, void *userData);
 
 #endif
+		// Check if a key is a known special character with no side effects on text boxes.
+		static bool keyIsKnownSpecial(EKEY_CODE key);
+
+		// Return the Char that should be sent to Irrlicht for the given key (either the one passed in or 0).
+		static int findCharToPassToIrrlicht(int assumedChar, EKEY_CODE key);
+
+		// Check if a text box is in focus. Enable or disable SDL_TEXTINPUT events only if in focus.
+		void resetReceiveTextInputEvents();
+
 		//! create the driver
 		void createDriver();
 
@@ -287,7 +298,6 @@ namespace irr
 		u32 Width, Height;
 
 		bool Resizable;
-		bool WindowMinimized;
 
 		struct SKeyMap
 		{
@@ -313,5 +323,3 @@ namespace irr
 } // end namespace irr
 
 #endif // _IRR_COMPILE_WITH_SDL_DEVICE_
-#endif // __C_IRR_DEVICE_SDL_H_INCLUDED__
-

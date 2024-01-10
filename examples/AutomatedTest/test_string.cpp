@@ -17,6 +17,8 @@ static void test_basics()
 	UASSERTEQ(s.c_str()[0], '\0');
 	s = stringc(0.1234567);
 	UASSERTSTR(s, "0.123457");
+	s = stringc(0x1p+53);
+	UASSERTSTR(s, "9007199254740992.000000");
 	s = stringc(static_cast<int>(-102400));
 	UASSERTSTR(s, "-102400");
 	s = stringc(static_cast<unsigned int>(102400));
@@ -27,20 +29,22 @@ static void test_basics()
 	UASSERTSTR(s, "1024000");
 	s = stringc("YESno", 3);
 	UASSERTSTR(s, "YES");
+	s = stringc(L"test", 4);
+	UASSERTSTR(s, "test");
 	s = stringc("Hello World!");
 	UASSERTSTR(s, "Hello World!");
 	// operator=
 	s = stringw(L"abcdef");
 	UASSERTSTR(s, "abcdef");
-	s = stringc("test");
-	s = s.c_str();
-	UASSERTSTR(s, "test");
-	s = s.c_str() + 1;
-	UASSERTSTR(s, "est");
 	s = L"abcdef";
 	UASSERTSTR(s, "abcdef");
 	s = static_cast<const char*>(nullptr);
 	UASSERTSTR(s, "");
+	// operator+
+	s = s + stringc("foo");
+	UASSERTSTR(s, "foo");
+	s = s + L"bar";
+	UASSERTSTR(s, "foobar");
 	// the rest
 	s = "f";
 	UASSERTEQ(s[0], 'f');
@@ -53,6 +57,9 @@ static void test_basics()
 	UASSERT(sref < stringc("b"));
 	UASSERT(stringc("Z") < sref);
 	UASSERT(!(sref < stringc("a")));
+	UASSERT(sref.lower_ignore_case("AA"));
+	UASSERT(sref.lower_ignore_case("B"));
+	UASSERT(!sref.lower_ignore_case("A"));
 	s = "dog";
 	UASSERT(sref != "cat");
 	UASSERT(sref != stringc("cat"));
@@ -68,6 +75,7 @@ static void test_methods()
 	s.clear();
 	UASSERTEQ(sref.size(), 0);
 	UASSERT(sref.empty());
+	UASSERT(sref[0] == 0);
 	s = "\tAz#`";
 	s.make_lower();
 	UASSERTSTR(s, "\taz#`");
@@ -160,22 +168,32 @@ static void test_methods()
 
 static void test_conv()
 {
-	// assumes Unicode and UTF-8 locale
-	setlocale(LC_CTYPE, "");
+	// locale-independent
 
 	stringw out;
-	multibyteToWString(out, "†††");
+	utf8ToWString(out, "†††");
 	UASSERTEQ(out.size(), 3);
 	for (int i = 0; i < 3; i++)
 		UASSERTEQ(static_cast<u16>(out[i]), 0x2020);
+
 	stringc out2;
-	wStringToMultibyte(out2, L"†††");
+	wStringToUTF8(out2, L"†††");
 	UASSERTEQ(out2.size(), 9);
 	for (int i = 0; i < 3; i++) {
 		UASSERTEQ(static_cast<u8>(out2[3*i]), 0xe2);
 		UASSERTEQ(static_cast<u8>(out2[3*i+1]), 0x80);
 		UASSERTEQ(static_cast<u8>(out2[3*i+2]), 0xa0);
 	}
+
+	// locale-dependent
+	if (!setlocale(LC_CTYPE, "C.UTF-8"))
+		setlocale(LC_CTYPE, "UTF-8"); // macOS
+
+	stringw out3;
+	multibyteToWString(out3, "†††");
+	UASSERTEQ(out3.size(), 3);
+	for (int i = 0; i < 3; i++)
+		UASSERTEQ(static_cast<u16>(out3[i]), 0x2020);
 }
 
 void test_irr_string()

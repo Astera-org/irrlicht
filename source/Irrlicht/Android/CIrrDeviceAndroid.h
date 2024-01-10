@@ -2,16 +2,12 @@
 // This file is part of the "Irrlicht Engine".
 // For conditions of distribution and use, see copyright notice in irrlicht.h
 
-#ifndef __C_IRR_DEVICE_ANDROID_H_INCLUDED__
-#define __C_IRR_DEVICE_ANDROID_H_INCLUDED__
+#pragma once
 
-#include "IrrCompileConfig.h"
 
-#ifdef _IRR_COMPILE_WITH_ANDROID_DEVICE_
 
 #include "CIrrDeviceStub.h"
 #include "IrrlichtDevice.h"
-#include "IImagePresenter.h"
 #include "ICursorControl.h"
 
 #include <android/sensor.h>
@@ -19,7 +15,7 @@
 
 namespace irr
 {
-	class CIrrDeviceAndroid : public CIrrDeviceStub, video::IImagePresenter
+	class CIrrDeviceAndroid : public CIrrDeviceStub
 	{
 	public:
 		CIrrDeviceAndroid(const SIrrlichtCreationParameters& param);
@@ -34,13 +30,13 @@ namespace irr
 
 		virtual void setWindowCaption(const wchar_t* text);
 
-		virtual bool present(video::IImage* surface, void* windowId, core::rect<s32>* srcClip);
-
 		virtual bool isWindowActive() const;
 
 		virtual bool isWindowFocused() const;
 
 		virtual bool isWindowMinimized() const;
+
+		virtual bool isWindowVisible() const;
 
 		virtual void closeDevice();
 
@@ -103,5 +99,3 @@ namespace irr
 
 } // end namespace irr
 
-#endif // _IRR_COMPILE_WITH_ANDROID_DEVICE_
-#endif // __C_IRR_DEVICE_ANDROID_H_INCLUDED__
