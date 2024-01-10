@@ -19,6 +19,10 @@
 
 #include <stdio.h> // TODO: Although included elsewhere this is required at least for mingw
 
+#if BUILD_HEADLESS
+#define _IRR_COMPILE_WITH_SDL_DEVICE_
+#endif
+
 #ifdef _WIN32
 #define IRRCALLCONV __stdcall
 #else
