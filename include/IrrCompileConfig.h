@@ -17,8 +17,7 @@
 #define IRRLICHT_VERSION_SVN alpha
 #define IRRLICHT_SDK_VERSION "1.9.0" IRRLICHT_VERSION_MT
 
-#if BUILD_HEADLESS
-// from https://github.com/EleutherAI/irrlicht
+#if BUILD_HEADLESS // from https://github.com/EleutherAI/irrlicht
 #define _IRR_COMPILE_WITH_SDL_DEVICE_
 #endif
 
