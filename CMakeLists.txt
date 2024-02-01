@@ -45,6 +45,7 @@ enable_testing()
 add_subdirectory(source/Irrlicht)
 add_subdirectory(test)
 
+option(BUILD_HEADLESS "Build in headless mode" ON)
 option(BUILD_EXAMPLES "Build example applications" FALSE)
 if(BUILD_EXAMPLES)
 	add_subdirectory(examples)

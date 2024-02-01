@@ -274,6 +274,10 @@ if(USE_SDL2)
 	find_package(SDL2 CONFIG REQUIRED)
 	message(STATUS "Found SDL2: ${SDL2_LIBRARIES}")
 endif()
+if(BUILD_HEADLESS)
+	find_package(SDL2 REQUIRED)
+	add_definitions(-DBUILD_HEADLESS=1)
+endif()
 
 # Platform-specific libs
 
